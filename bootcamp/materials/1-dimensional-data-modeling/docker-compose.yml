@@ -5,7 +5,6 @@ services:
     container_name: ${DOCKER_CONTAINER}
     env_file:
       - .env
-      - example.env
     environment:
       - POSTGRES_DB=${POSTGRES_SCHEMA}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -20,3 +19,6 @@ services:
 
 volumes:
   postgres-data:
+
+
+
