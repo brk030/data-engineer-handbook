@@ -38,3 +38,42 @@ Run Length Encoding
 useful for temporal data
 - Shuffling (Spark Shuffle etc.) will break the benefits of the parquet ordering 
   - one can either resort the data or the data is in an array which gets exploded
+
+Day 2 - Lecture 
+https://www.youtube.com/watch?v=emQM9gYh0Io&t=352s&ab_channel=DatawithZach
+
+
+Types of Dimensions
+- Stable Dimensions - attributes that do not change, such as a person's birthday
+- Changing Dimensions - attributes that evolve over time, requiring careful modeling to track changes 
+
+Idempotent pipelines
+- denoting an element of a set which is unchanged in value when multiplied or otherwise operated on by itself 
+  - pipelines should always produce the same results 
+
+Problems with idempotent pipelines 
+- silent failure, it does not fail it just produces incorrect/different/non-reproducible data 
+
+Best Practices for building idempotent pipelines
+- avoid insert into without truncate 
+  - using `INSERT INTO` without clearing previous data can lead to duplication and non-idempotency
+- use merge (do not write duplicares into the table) and insert overwrite
+  - These methods help maintain idempotency by ensuring that data is updated correctly without duplication
+- implement proper date ranges
+  - always include both start and end dates in your queries to avoid unbounded data retrieval, which can lead to inconsistencies
+- check for complete input sets
+  - ensure all necessary input data is available before running the pipeline to avoid incomplete data processing
+- be careful about dependencies on past data
+  - cumulative data depends on previous days and cannot run parellel, which might make it inefficient running 
+
+Consequences of non-idempotent pipelines
+- backfilling causes inconsistencies between the old and restated data and it's very hard to troubleshoot bugs. 18:33 - 19:10
+- unit testing cannot replicate the production behavior. 19:14 - 19:44
+- silent failures
+
+Modeling slowly changing dimensions 
+- Types of SCDs:
+  - Type 0 - fixed dimensions that do not change (e.g., a person's birth date)
+  - Type 1 - only the latest value is stored (overwrite), which can lead to loss of historical data -> leads to not idempotent pipelinea 
+  - Type 2 - maintains historical data with start and end dates (such as. 9999-12-31) for each change, allowing for accurate backfilling and idempotency
+  - Type 3 - stores current and original values but loses historical context if changes occur more than once, making it non-idempotent
