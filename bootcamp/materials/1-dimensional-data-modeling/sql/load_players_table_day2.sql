@@ -27,11 +27,8 @@ WITH years AS (
                             ps.pts,
                             ps.reb,
                             ps.ast
-                        )::season_stats
-                END)
-            OVER (PARTITION BY pas.player_name ORDER BY COALESCE(pas.season, ps.season)),
-            NULL
-        ) AS seasons
+                        )::season_stats END
+                ) OVER (PARTITION BY pas.player_name ORDER BY COALESCE(pas.season, ps.season)), NULL) AS seasons
     FROM players_and_seasons pas
     LEFT JOIN player_seasons ps
         ON pas.player_name = ps.player_name
