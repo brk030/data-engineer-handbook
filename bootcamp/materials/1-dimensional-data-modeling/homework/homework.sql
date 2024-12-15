@@ -75,22 +75,23 @@ END $$;
     
 -- DDL for table 'actors_history_scd'
 /*
-DROP TABLE IF EXISTS actors;
-CREATE TABLE actors (
+DROP TABLE IF EXISTS actors_history_scd;
+CREATE TABLE actors_history_scd (
         actor TEXT,
-        year INTEGER,
         quality_class quality_class,
         is_active BOOLEAN,
-        start_date INTEGER,
-        end_date INTEGER,
+        current_year INTEGER,
+        start_year INTEGER,
+        end_year INTEGER,
         PRIMARY KEY (actor, start_date, end_date)
         );
 
 */
 
 
---
+-- 4. Backfill query
 /*
+insert into actors_history_scd
 with
 
 cte_with_previous as (
@@ -101,7 +102,9 @@ cte_with_previous as (
 		LAG(quality_class, 1) over (partition by actor order by year) previous_quality_class,
 		is_active,
 		LAG(is_active, 1) over (partition by actor order by year) as previous_is_active
-	from actors order by actor, year
+	from actors
+	where year <= 2020
+	order by actor, year
 ),
 
 cte_with_change_indicator as (
@@ -123,7 +126,7 @@ select
 	actor,
 	quality_class,
 	is_active,
-	2021 as current_year,
+	2020 as current_year,
 	MIN(year) as start_year,
 	MAX(year) as end_year
 from cte_with_streaks
@@ -131,3 +134,70 @@ group by
 	actor, streak_identifier, quality_class, is_active
 ;
 */
+
+
+-- 5. Incremental query for actors_history_scd
+/*
+ CREATE TYPE scd_type_actors AS (
+        quality_class quality_class,
+        is_active BOOLEAN,
+        start_season INTEGER,
+        end_season INTEGER);
+*/
+
+WITH
+
+historical_year_scd AS (
+    SELECT
+        actor,
+        quality_class,
+        is_active,
+        start_year,
+        end_year
+    FROM actors_history_scd
+    WHERE current_year = 2020
+        AND end_year < 2020
+),
+
+last_year_scd AS (
+    SELECT *
+    FROM actors_history_scd
+    WHERE current_year = 2020 and end_year=2020
+),
+
+this_year_data as (
+	select *
+	from actors a
+	where year=2021
+),
+
+unchanged_records as (
+	select *
+	from this_year_data ty
+	join last_year_scd ly
+		on ty.actor=ly.actor
+	where ty.quality_class = ly.quality_class and ty.is_active = ly.is_active
+),
+
+changed_records as (
+	select
+		ty.actor,
+
+		unnest(
+			ARRAY[
+				row(ty.quality_class, ty.is_active, ty.year, ty.year)::scd_type_actors,
+				row(ly.quality_class, ly.is_active, ly.start_year, ly.current_year)::scd_type_actors
+			]
+		) as records
+
+	from this_year_data ty
+	join last_year_scd ly
+		on ty.actor=ly.actor
+	where 1=1
+		and (ty.quality_class <> ly.quality_class OR ty.is_active <> ly.is_active)
+		and ly.actor is not null
+)
+
+select actor, (records::scd_type_actors).* from changed_records
+
+
