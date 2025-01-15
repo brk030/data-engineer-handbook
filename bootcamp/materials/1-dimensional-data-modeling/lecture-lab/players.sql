@@ -6,7 +6,7 @@
                          weight INTEGER
                        );
  CREATE TYPE scoring_class AS
-     ENUM ('bad', 'average', 'good', 'star');
+     ENUM('bad', 'average', 'good', 'star');
 
 
  CREATE TABLE players (

@@ -86,3 +86,51 @@ How to look at Spark query plans
 Spark output datasets
 - should almost always be partioned on "date"
   - date should be the execution date of the pipeline (in big tech this is called "ds partitioning")
+
+Spark Server vs. Spark Notebooks
+- Spark Server: every run is fresh, things get uncached automatically -> nice for testing
+- Notebook: make sure to call 'unpersist()'
+
+ToDo: learn more about caching
+Caching and Temporary Views
+- temporary views always get recomputed unless cached
+- caching
+  - storage levels: MEMORY_ONLY, DISK_ONLY, MEMORY_AND_DISK (the default)
+  - caching is only good if it fits into memory (caching to disk is the same as writing out to disk)
+  - in notebooks call unpersist when you are done otherwise the cached data will just hang out
+
+Caching vs Broadcast
+- caching stores pre-computed values for re-use and stays partitioned 
+- broadcast JOIN:
+  - small data that gets cached and shipped in entirety to each executor (only get one partition)
+  - broadcast JOINs prevent shuffle
+  - threshold is set by "spark.sql.autoBroadcastJoinThreshold"
+    - default is 10MB but can be pushed until single GB
+  - can explicityl wrap a dataset with broadcast(df) instead of setting a threshold
+    - will trigger the broadcast join regardless of dataframe size
+
+UDFs - User Defined Functions
+- Apache Arrow optimizations in recent versions of Spark have helped pyspark UDFs become more inline 
+with Scala Spark UDFs
+  - before code was run in Scala (JVM), got serialized to python for the UDF and after running the UDFs 
+  serialized it back to Scala 
+- dataset API (only in Scala) allows you to not even need UDFs, you can use pure Scala functions instead 
+
+DataFrame vs Dataset vs SparkSQL
+- Dataset is only Scala 
+- DataFrame vs SparkSQL
+  - DataFrame is more suited for pipelines that are more hardened and less likely to experience change
+  - SparkSQL is better for pipelines that are used in collaboration with data scientists
+  - Dataset is best for pipelines that require unit and integration tests 
+
+Parquet
+- run-length encoding allows for powerful compression 
+- do not use global ".sort()" instead use ".sortWithinPartitions"
+
+Spark Tuning
+- executor memory (can be set up until 16GB, but do not just set it to the max as it wastes a lot)
+- driver memory only needs to be bumped up if you are calling df.collect() or have a very complex job
+- shuffle partitions, default is 200 but it is better to aim for around 100MB per partition to get the right sized 
+output datasets
+- AQE (adeptive query execution) helps with skewed datasets but is wasteful if the dataset is not skewed
+- 

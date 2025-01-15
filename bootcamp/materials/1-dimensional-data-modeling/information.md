@@ -77,3 +77,42 @@ Modeling slowly changing dimensions
   - Type 1 - only the latest value is stored (overwrite), which can lead to loss of historical data -> leads to not idempotent pipelinea 
   - Type 2 - maintains historical data with start and end dates (such as. 9999-12-31) for each change, allowing for accurate backfilling and idempotency
   - Type 3 - stores current and original values but loses historical context if changes occur more than once, making it non-idempotent
+
+
+Day 3
+
+What makes dimensions additive?
+- dimension is additive over a specific window of time, if and only if, the grain of data over that window can only ever
+be one value at a time
+- additive dimensions mean that you do not "double count"
+  - example additive:
+    - population is equal to 20 year olds + 30 year olds + ...
+  - example non-additive:
+    - number of active users != number of users on web + number of users on android + ...
+
+How does additivity help?
+- do not need to use COUNT(DISTINCT) on preaggregated dimensions
+- non-additive dimensions are usually only non-additive with respect to COUNT-aggregations but not to SUM-aggregations
+
+When & why should you use enums?
+- enums are great for low-to-medium cardinality (up to 50 is a good number)
+- build in data quality (if you write a value that does not fit into enum the operation fails)
+- build in static fields 
+- build in documentation (you have an exhaustive list and cannot miss a value)
+
+ToDo - read a pipeline schema of Zac: https://github.com/EcZachly/little-book-of-pipelines/tree/master
+ToDo - read about flexible Schema
+
+How is graph data modeling different?
+- graph modeling is relationship focused and not entity focused (do not care about columns)
+- because of this you can do a very poor job at modeling the entities, usually the model looks like this:
+  - identifier: String
+  - type: String
+  - properties: MAP <String, String>
+- relationships are modeled a bit more in depth:
+  - subject_identifier: String
+  - subject_type: Vertex_Type
+  - object_identifier: String
+  - object_type: vertex_type
+  - edge_type: edge_type
+  - properties: MAP <String, String> 
